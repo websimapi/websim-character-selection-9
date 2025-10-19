@@ -1,6 +1,6 @@
 // Palette-based recolor: 8 grayscale bands -> slot color + per-character accents + skin + hair
 (function(){
-  const SLOT_HUES = { blue: 240, green: 120, yellow: 60, red: 0 };
+  const SLOT_HUES = { blue: 240, 'light-blue': 210, green: 120, 'light-green': 90, yellow: 60, 'dark-yellow': 45, red: 0, pink: 330 };
   const DEFAULT_PALETTES = {
     Warrior: { skinH: 28, skinS: 0.45, skinL: 0.72, unique1: '#9aa3ad', unique2: '#6b3f1f' },
     Archer:  { skinH: 30, skinS: 0.55, skinL: 0.60, unique1: '#8b5a2b', unique2: '#2e8b57' },
@@ -66,7 +66,7 @@
 
   function getLuma(r,g,b){ return Math.round(0.2126*r + 0.7152*g + 0.0722*b); }
 
-  async function paletteRecolor(img, character, slotColorName, returnBlob=true){
+  async function paletteRecolor(img, character, colorVariant, returnBlob=true){
     return new Promise(resolve=>{
       const run=()=>{
         try{
@@ -74,7 +74,7 @@
           c.width=img.naturalWidth; c.height=img.naturalHeight;
           x.drawImage(img,0,0);
           const d=x.getImageData(0,0,c.width,c.height), p=d.data;
-          const hue=SLOT_HUES[slotColorName] ?? 240;
+          const hue=SLOT_HUES[colorVariant] ?? 240;
           const lerp=(a,b,t)=>Math.round(a+(b-a)*t);
           for(let i=0;i<p.length;i+=4){
             const a=p[i+3]; if(a<5) continue;

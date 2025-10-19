@@ -26,6 +26,25 @@ function initializeCharacterSelection() {
         // Initial color shader application
         applyColorShader(slot);
 
+        // Color swatch listeners
+        const colorSwatches = slot.querySelectorAll('.color-swatch');
+        colorSwatches.forEach(swatch => {
+            swatch.addEventListener('click', () => {
+                if (!canControlSlot(index) || swatch.classList.contains('active')) return;
+                
+                const newVariant = swatch.dataset.colorVariant;
+                
+                if (isHost) {
+                    playerSlots[index].colorVariant = newVariant;
+                    updateCharacterSlot(slot, characters[playerSlots[index].characterIndex], 'fade');
+                    colorSwatches.forEach(s => s.classList.toggle('active', s.dataset.colorVariant === newVariant));
+                    broadcastToClients({ type: 'color_variant_change', slotIndex: index, colorVariant: newVariant });
+                } else {
+                    sendToHost({ type: 'color_variant_change', slotIndex: index, colorVariant: newVariant });
+                }
+            });
+        });
+
         // Arrow click listeners for character swapping (only for host or own slot)
         const leftArrow = slot.querySelector('.left-arrow');
         const rightArrow = slot.querySelector('.right-arrow');
@@ -308,24 +327,32 @@ function updateCharacterSlotsUI() {
         const playerSlot = playerSlots[index];
         const currentCharacterIndex = parseInt(slot.dataset.characterIndex, 10);
         const currentGender = slot.dataset.archerGender;
+        const currentActiveSwatch = slot.querySelector('.color-swatch.active');
+        const currentColorVariant = currentActiveSwatch ? currentActiveSwatch.dataset.colorVariant : playerSlot.color;
 
         if (playerSlot.occupied) {
             slot.classList.remove('empty');
             const skull = slot.querySelector('.skull-overlay'); if (skull) skull.remove();
             
             let characterChanged = playerSlot.characterIndex !== currentCharacterIndex;
+            let colorChanged = playerSlot.colorVariant !== currentColorVariant;
             let genderChanged = false;
             if (characters[playerSlot.characterIndex].genders) {
                 genderChanged = playerSlot.gender !== currentGender;
             }
 
             // Only update if there's a change
-            if (characterChanged || genderChanged) {
+            if (characterChanged || genderChanged || colorChanged) {
                 if (!suppressUIAnimationOnce) {
                     updateCharacterSlot(slot, characters[playerSlot.characterIndex], 'fade');
                 }
             }
             
+            // Sync color swatches
+            slot.querySelectorAll('.color-swatch').forEach(s => {
+                s.classList.toggle('active', s.dataset.colorVariant === playerSlot.colorVariant);
+            });
+
             // Always ensure data attributes are in sync, even if no visual update is needed right now.
             slot.dataset.characterIndex = playerSlot.characterIndex;
             if (characters[playerSlot.characterIndex].genders) {

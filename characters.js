@@ -36,6 +36,7 @@ function updateCharacterSlot(slot, character, direction) {
     const color = slot.dataset.color;
     const genderToggleContainer = slot.querySelector('.gender-toggle-container');
     const genderToggles = slot.querySelectorAll('.gender-toggle');
+    const colorSwatches = slot.querySelectorAll('.color-swatch');
 
     // Update character index on the slot itself
     const newCharacterIndex = characters.indexOf(character);
@@ -55,6 +56,7 @@ function updateCharacterSlot(slot, character, direction) {
     // Disable controls during animation
     arrows.forEach(arrow => arrow.disabled = true);
     genderToggles.forEach(toggle => toggle.disabled = true);
+    colorSwatches.forEach(swatch => swatch.disabled = true);
     document.dispatchEvent(new CustomEvent('relic-cursor-refresh'));
     
     // Fade out name
@@ -62,7 +64,9 @@ function updateCharacterSlot(slot, character, direction) {
 
     // Create new image
     const newImage = document.createElement('img');
-    const cachedSrc = characterImageCache[characterImgSrc]?.[color];
+    const slotIndex = parseInt(slot.dataset.player, 10) - 1;
+    const colorVariant = playerSlots[slotIndex]?.colorVariant || color;
+    const cachedSrc = characterImageCache[characterImgSrc]?.[colorVariant];
     newImage.src = cachedSrc || characterImgSrc; // Use cached image if available
     
     newImage.alt = character.name;
@@ -79,7 +83,7 @@ function updateCharacterSlot(slot, character, direction) {
 
     // If we used a fallback, apply shader (should be rare after preloading)
     if (!cachedSrc) {
-        applyColorShaderToImage(newImage, color);
+        applyColorShaderToImage(newImage, colorVariant);
     }
 
     // Animate old image out (guard if none)
@@ -120,6 +124,7 @@ function updateCharacterSlot(slot, character, direction) {
         // Re-enable controls
         arrows.forEach(arrow => arrow.disabled = false);
         genderToggles.forEach(toggle => toggle.disabled = false);
+        colorSwatches.forEach(swatch => swatch.disabled = false);
         document.dispatchEvent(new CustomEvent('relic-cursor-refresh'));
     }, ANIMATION_DURATION);
 
@@ -134,7 +139,8 @@ function preprocessCharacters() {
     const tasks = [];
     document.querySelectorAll('.character-slot').forEach(slot => {
         const img = slot.querySelector('.character-image');
-        const color = slot.dataset.color;
+        const slotIndex = parseInt(slot.dataset.player, 10) - 1;
+        const colorVariant = playerSlots[slotIndex]?.colorVariant || slot.dataset.color;
         const character = characters[parseInt(slot.dataset.characterIndex, 10)];
 
         let characterImgSrc;
@@ -145,7 +151,7 @@ function preprocessCharacters() {
             characterImgSrc = character.img;
         }
 
-        const cachedSrc = characterImageCache[characterImgSrc]?.[color];
+        const cachedSrc = characterImageCache[characterImgSrc]?.[colorVariant];
         
         if (cachedSrc) {
             if (img.dataset.blobUrl) URL.revokeObjectURL(img.dataset.blobUrl);
@@ -153,7 +159,7 @@ function preprocessCharacters() {
             img.dataset.blobUrl = cachedSrc;
         } else {
              // Fallback for safety, though should not be needed after preloading
-            tasks.push(applyColorShaderToImage(img, color));
+            tasks.push(applyColorShaderToImage(img, colorVariant));
         }
     });
     return Promise.all(tasks);
@@ -161,7 +167,7 @@ function preprocessCharacters() {
 
 async function preloadAllCharacterImages() {
     console.log("Preloading all character image variants...");
-    const colors = ['blue', 'green', 'yellow', 'red'];
+    const colors = ['blue', 'light-blue', 'green', 'light-green', 'yellow', 'dark-yellow', 'red', 'pink'];
     const promises = [];
     const imagesToLoad = [];
 

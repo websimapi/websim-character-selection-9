@@ -95,6 +95,15 @@ function handleHostMessage(data) {
             }
             updatePlayerChip(data.slotIndex, 'fade');
             break;
+            
+        case 'color_variant_change':
+            if (slotElement) {
+                playerSlots[data.slotIndex].colorVariant = data.colorVariant;
+                slotElement.querySelectorAll('.color-swatch').forEach(s => s.classList.toggle('active', s.dataset.colorVariant === data.colorVariant));
+                updateCharacterSlot(slotElement, characters[playerSlots[data.slotIndex].characterIndex], 'fade');
+            }
+            updatePlayerChip(data.slotIndex, 'fade');
+            break;
     }
 }
 
@@ -187,6 +196,23 @@ function handleClientMessage(conn, data) {
                 }
             }
             break;
+        case 'color_variant_change':
+            if (slotIndex === data.slotIndex) { // Security check
+                playerSlot.colorVariant = data.colorVariant;
+                
+                broadcastToClients({
+                    type: 'color_variant_change',
+                    slotIndex: slotIndex,
+                    colorVariant: data.colorVariant
+                });
+                
+                const slotElement = document.querySelector(`.character-slot[data-player="${slotIndex + 1}"]`);
+                if (slotElement) {
+                     slotElement.querySelectorAll('.color-swatch').forEach(s => s.classList.toggle('active', s.dataset.colorVariant === data.colorVariant));
+                     updateCharacterSlot(slotElement, characters[playerSlot.characterIndex], 'fade');
+                }
+            }
+            break;
         case 'slot_switch':
             hostAssignClientToSlot(conn.peer, data.targetIndex);
             break;
@@ -223,7 +249,7 @@ function hostAssignClientToSlot(peerIdToMove, targetIndex) {
     if (!target || target.occupied) return;
     const current = playerSlots.find(s => s.playerId === peerIdToMove);
     if (!current) return;
-    target.occupied = true; target.playerId = peerIdToMove; target.characterIndex = current.characterIndex; target.gender = current.gender;
+    target.occupied = true; target.playerId = peerIdToMove; target.characterIndex = current.characterIndex; target.gender = current.gender; target.colorVariant = current.colorVariant;
     current.occupied = false; current.playerId = null;
     broadcastToClients({ type: 'player_slots_update', playerSlots });
     const conn = connections.find(c => c.peer === peerIdToMove);
